@@ -7,6 +7,7 @@ The dataset contains images of upper teeth and lower teeth. After looking at the
 - **Histogram Equalisation**: In particular performed Adaptive histogram equalisation. This improved the contrast of the image
 - **Thresholding**: Performed OTSU thresholding to get the boundry of the images
 
+# Training
 Once we get the external shape of the teeth, the next stage is to train the classifier. For this case I have chosen a pre-trained architecture and done transfer learning. This is because the dataset available is very small and hence it makes sense to perform trasnfer learning. The following steps were performed during training 
 
 - **Basic Pre-processing and augmentation**: This step involved normalisation and resizing of the image. I have also performed data augmentation by rotating the image on horizontal axis. 
