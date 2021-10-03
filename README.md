@@ -23,7 +23,7 @@ The following were my results post training of 10 epochs:
 ![Results of code](./results.png?raw=true )
 
 # Steps to recreate the code:
-- To recreate the code, just mention the path to your image directory on line 29. The path should be "some_path/Imagefiles/". Make sure that you add the leading "/" at the end.
+- To recreate the code, just mention the path to your image directory on **line 29**. The path should be "some_path/Imagefiles/". **Make sure that you add the leading "/" at the end.**
 
 
 
