@@ -20,7 +20,7 @@ Once we get the external shape of the teeth, the next stage is to train the clas
 # Results:
 I have tested this dataset on a pretrained model(transfer learning) as well as custom architecture. The custom architecture did not give very good results. I believe thats because the transfer learning model already was pretrained on a significantly larger dataset. Hence transfer learning out performed custom architecture.
 The following were my results post training of 10 epochs:
-
+![Results of code](./results.png?raw=true )
 
 # Steps to recreate the code:
 - To recreate the code, just mention the path to your image directory on line 29. The path should be "some_path/Imagefiles/". Make sure that you add the leading "/" at the end.
