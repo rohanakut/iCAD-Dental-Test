@@ -19,6 +19,7 @@ Once we get the external shape of the teeth, the next stage is to train the clas
 
 # Results:
 I have tested this dataset on a pretrained model(transfer learning) as well as custom architecture. The custom architecture did not give very good results. I believe thats because the transfer learning model already was pretrained on a significantly larger dataset. Hence transfer learning out performed custom architecture.
+The following were my results post training of 10 epochs:
 
 
 # Steps to recreate the code:
