@@ -153,27 +153,28 @@ def train_model(model, criterion, optimizer, scheduler, train_size,val_size,num_
 			}, './save.pth')
 	return model
 
+##test model
 def test_model(test_loader,test_size):
 	corrects = 0
 	all_preds = []
 	y = []
 	for inputs, labels in tqdm(test_loader):
-				inputs = inputs.to(device)
-				labels = labels.to(device)
-				inputs = inputs.float()
-				labels = labels.reshape(len(labels))
-				outputs = model_conv(inputs)
-				_, preds = torch.max(outputs, 1)
-				corrects += torch.sum(preds == labels.data)
-				preds = preds.to("cpu")
-				labels = labels.to("cpu")
-				preds = preds.numpy()
-				labels = labels.numpy()
-				all_preds = np.append(all_preds,preds)
-				y = np.append(y,labels)
+		inputs = inputs.to(device)
+		labels = labels.to(device)
+		inputs = inputs.float()
+		labels = labels.reshape(len(labels))
+		outputs = model_conv(inputs)
+		_, preds = torch.max(outputs, 1)
+		corrects += torch.sum(preds == labels.data)
+		preds = preds.to("cpu")
+		labels = labels.to("cpu")
+		preds = preds.numpy()
+		labels = labels.numpy()
+		all_preds = np.append(all_preds,preds)
+		y = np.append(y,labels)
 	epoch_acc = corrects.float() / test_size
 	tn, fp, fn, tp = confusion_matrix(y, all_preds).ravel()
-	sensitivity  =tp / (tn+fp)
+	sensitivity  = tp / (tp+fn)
 	specificity = tn/(tn+fp)
 	epoch_acc = epoch_acc.to("cpu")
 	epoch_acc = epoch_acc.numpy()
@@ -184,7 +185,7 @@ def test_model(test_loader,test_size):
 
 
 if __name__ == "__main__":
-
+	##push to gpu else cpu
 	device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 	dataset = CustomDataset()
 	batch_size = 4
@@ -193,7 +194,7 @@ if __name__ == "__main__":
 	random_seed= 42
 	epochs = 10
 
-	# Creating data indices for training and validation splits:
+	# Creating data indices for training and validation and testing splits:
 	dataset_size = len(dataset)
 	indices = list(range(dataset_size))
 	split = int(np.floor(validation_split * dataset_size))
