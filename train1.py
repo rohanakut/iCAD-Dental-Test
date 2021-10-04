@@ -4,37 +4,30 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
-import os
 import cv2
 import glob
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
-import torchvision
-from torchvision import datasets, models, transforms
+from torchvision import models
 from torch.optim import lr_scheduler
-import matplotlib.pyplot as plt
-import os
 import numpy as np
 from tqdm import tqdm
 import time
 import copy
-from sklearn.metrics import multilabel_confusion_matrix
 from sklearn.metrics import confusion_matrix
 
-
+##Custom Dataloader
 class CustomDataset(Dataset):
 	def __init__(self):
-		self.imgs_path = "/content/drive/MyDrive/Imagefiles/"
+		self.imgs_path = "../Imagefiles/"
 		file_list = glob.glob(self.imgs_path + "*")
-		#print(file_list)
 		self.data = []
 		for class_path in file_list:
 			class_name = class_path.split("/")[-1]
 			for img_path in glob.glob(class_path + "/*.png"):
 				self.data.append([img_path, class_name])
-		#print(self.data)
 		self.class_map = {"lower_images" : 0, "upper_images": 1}
 		self.img_dim = (416, 416)
 	
@@ -42,36 +35,31 @@ class CustomDataset(Dataset):
 		return len(self.data)
 
 	def __getitem__(self, idx):
+		##preprocessing
 		img_path, class_name = self.data[idx]
 		img = cv2.imread(img_path)
+		##resizing
 		img = cv2.resize(img, self.img_dim)
-		norm = cv2.normalize(img, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
 		class_id = self.class_map[class_name]
 		class_id = torch.tensor([class_id])
-		#print(class_id)
-		#class_id = class_id.resize(4)
+		#histogram qequalisation
 		lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
 		lab_planes  = cv2.split(lab)
 		clahe = cv2.createCLAHE(clipLimit=10.0,tileGridSize=(2,2))
 		lab_planes[0] = clahe.apply(lab_planes[0])
 		lab = cv2.merge(lab_planes)
 		bgr_changed = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
-		# image = cv2.cvtColor(bgr_changed,cv2.COLOR_BGR2GRAY)
-		# se = cv2.getStructuringElement(cv2.MORPH_RECT , (8,8))
-		# bg = cv2.morphologyEx(image, cv2.MORPH_DILATE, se)
-		# out_gray = cv2.divide(image, bg, scale=255)
-		# out_binary = cv2.threshold(out_gray, 0, 255, cv2.THRESH_OTSU )[1]
-		# lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
-		img_tensor = torch.from_numpy(bgr_changed)
+		#normalisation
+		norm = cv2.normalize(bgr_changed, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+		img_tensor = torch.from_numpy(norm)
 		img_tensor = img_tensor.permute(2, 0, 1)
 		return img_tensor, class_id
 
+#download pretrained model
 def model():
 	model_conv = models.densenet121(pretrained=True)
 	for param in model_conv.parameters():
 		param.requires_grad = False
-
-# Parameters of newly constructed modules have requires_grad=True by default
 	num_ftrs = model_conv.classifier.in_features
 	model_conv.classifier = nn.Linear(num_ftrs, 2)
 
@@ -81,9 +69,6 @@ def model():
 
 def train_model(model, criterion, optimizer, scheduler, train_size,val_size,num_epochs=1):
 	since = time.time()
-	#wandb.watch(model, criterion, log="all", log_freq=10)
-
-	best_model_wts = copy.deepcopy(model.state_dict())
 	best_acc = 0.0
 	example_ct =0
 	batch_ct =0
@@ -95,6 +80,7 @@ def train_model(model, criterion, optimizer, scheduler, train_size,val_size,num_
 		model.train()
 		running_loss = 0.0
 		running_corrects = 0
+		##training loop
 		for inputs, labels in tqdm(train_loader):
 			inputs = inputs.to(device)
 			labels = labels.to(device)
@@ -118,6 +104,7 @@ def train_model(model, criterion, optimizer, scheduler, train_size,val_size,num_
 		print('{} Loss: {:.4f} Acc: {:.4f}'.format(
 			'Train', epoch_loss_train, epoch_acc_train))
 
+		##validation loop
 		for inputs, labels in tqdm(val_loader):
 			model.eval()
 			running_loss = 0.0
@@ -126,42 +113,48 @@ def train_model(model, criterion, optimizer, scheduler, train_size,val_size,num_
 			labels = labels.to(device) 
 			example_ct +=  len(inputs)
 			batch_ct += 1
-			# statistics
 			running_loss += loss.item() * inputs.size(0)
-			#print(inputs.size(0))
 			running_corrects += torch.sum(preds == labels.data)
 		epoch_loss_val = running_loss / val_size
 		epoch_acc_val = running_corrects.double() / val_size
-			# print('{} Loss: {:.4f} Acc: {:.4f}'.format(
-			# 'Validation', epoch_loss, epoch_acc))
 		if(epoch_acc_val>best_acc):
 			best_acc = epoch_acc_val
 			best_model_wts = copy.deepcopy(model.state_dict())
 		print('{} Loss: {:.4f} Acc: {:.4f}'.format(
 			'Validation', epoch_loss_val, epoch_acc_val))
+		if epoch_loss_val < min_val_loss:
+			epochs_no_improve = 0
+			min_val_loss = epoch_loss_val
+		else:
+			epochs_no_improve += 1
+		if epochs_no_improve == 6:
+			early_stop = True
+		if early_stop:
+			torch.save({
+			'epoch': epoch,
+			'model_state_dict': model.state_dict(),
+			'optimizer_state_dict': optimizer.state_dict(),
+			'loss': epoch_loss_val,
+			}, './early_stopped.pth')
+			print("Stopped")
+			break
 
 
 	time_elapsed = time.time() - since
 	print('Training complete in {:.0f}m {:.0f}s'.format(
 		time_elapsed // 60, time_elapsed % 60))
 	print('Best val Acc: {:4f}'.format(best_acc))
+	#save model once training is completed
 	torch.save({
 			'epoch': epoch,
 			'model_state_dict': model.state_dict(),
 			'optimizer_state_dict': optimizer.state_dict(),
 			'loss': epoch_loss_val,
 			}, './save.pth')
-	# load best model weights
-	model.load_state_dict(best_model_wts)
 	return model
 
 def test_model(test_loader,test_size):
 	corrects = 0
-	# checkpoint = torch.load('./ckpt.pth')
-	# model_conv.load_state_dict(checkpoint['model_state_dict'])
-	# optimizer_conv.load_state_dict(checkpoint['optimizer_state_dict'])
-	# epoch = checkpoint['epoch']
-	# loss = checkpoint['loss']
 	all_preds = []
 	y = []
 	for inputs, labels in tqdm(test_loader):
@@ -182,7 +175,7 @@ def test_model(test_loader,test_size):
 	tn, fp, fn, tp = confusion_matrix(y, all_preds).ravel()
 	sensitivity  =tp / (tn+fp)
 	specificity = tn/(tn+fp)
-    epoch_acc = epoch_acc.to("cpu")
+	epoch_acc = epoch_acc.to("cpu")
 	epoch_acc = epoch_acc.numpy()
 	print("Test Accuracy is:",epoch_acc*100)
 	print("Sensitivity is : ", sensitivity*100)
@@ -198,7 +191,7 @@ if __name__ == "__main__":
 	validation_split = .2
 	shuffle_dataset = True
 	random_seed= 42
-	epochs = 1
+	epochs = 10
 
 	# Creating data indices for training and validation splits:
 	dataset_size = len(dataset)
