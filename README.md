@@ -13,7 +13,8 @@ Once we get the external shape of the teeth, the next stage is to train the clas
 
 - **Custom Dataloader**: I have written my own custom dataloader to load he data. This is because the input data wasn't in the traditional pytorch format. 
 - **Early Stopping**: Since the dataset is small it makes sense to add early stopping. This is done to avoid overfitting of the data
-- **Save checkpoint**: I am saving the checkpoint at end of training and after early stopping.  
+- **Save checkpoint**: I am saving the checkpoint at end of training and after early stopping. 
+- **Train,Validation and Test Split**: This is done in 70-10-20 ratio. 
 
 
 
