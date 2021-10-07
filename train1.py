@@ -111,6 +111,11 @@ def train_model(model, criterion, optimizer, scheduler, train_size,val_size,num_
 			running_corrects = 0
 			inputs = inputs.to(device)
 			labels = labels.to(device) 
+			with torch.set_grad_enabled(False):
+				outputs = model(inputs)
+				labels = labels.reshape(len(labels))
+				_, preds = torch.max(outputs, 1)
+				loss = criterion(outputs, labels)
 			example_ct +=  len(inputs)
 			batch_ct += 1
 			running_loss += loss.item() * inputs.size(0)
