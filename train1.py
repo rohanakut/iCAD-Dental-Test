@@ -80,6 +80,8 @@ def train_model(model, criterion, optimizer, scheduler, train_size,val_size,num_
 		model.train()
 		running_loss = 0.0
 		running_corrects = 0
+		running_loss_val = 0.0
+		running_corrects_val = 0
 		##training loop
 		for inputs, labels in tqdm(train_loader):
 			inputs = inputs.to(device)
@@ -107,8 +109,6 @@ def train_model(model, criterion, optimizer, scheduler, train_size,val_size,num_
 		##validation loop
 		for inputs, labels in tqdm(val_loader):
 			model.eval()
-			running_loss = 0.0
-			running_corrects = 0
 			inputs = inputs.to(device)
 			labels = labels.to(device) 
 			with torch.set_grad_enabled(False):
@@ -118,10 +118,10 @@ def train_model(model, criterion, optimizer, scheduler, train_size,val_size,num_
 				loss = criterion(outputs, labels)
 			example_ct +=  len(inputs)
 			batch_ct += 1
-			running_loss += loss.item() * inputs.size(0)
-			running_corrects += torch.sum(preds == labels.data)
-		epoch_loss_val = running_loss / val_size
-		epoch_acc_val = running_corrects.double() / val_size
+			running_loss_val += loss.item() * inputs.size(0)
+			running_corrects_val += torch.sum(preds == labels.data)
+		epoch_loss_val = running_loss_val / val_size
+		epoch_acc_val = running_corrects_val.double() / val_size
 		if(epoch_acc_val>best_acc):
 			best_acc = epoch_acc_val
 			best_model_wts = copy.deepcopy(model.state_dict())
